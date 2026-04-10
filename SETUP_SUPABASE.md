@@ -19,6 +19,7 @@ Notes:
 - Returns use `process_return` function (stock restore + financial reversal).
 - Delete uses `delete_sale_and_restore_stock` (restores stock).
 - Inventory menu supports add/edit/delete.
+- Inventory supports multiple sizes with per-size quantities (`inventory_variants`).
 - Inventory includes optional `qr_code` and QR scan lookup in browser.
 - Sales filters menu supports date/product/status filtering + CSV export.
 - Security menu shows current user/role and operation logs.

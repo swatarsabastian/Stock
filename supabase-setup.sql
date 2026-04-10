@@ -12,6 +12,13 @@ create table if not exists public.inventory (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.inventory_variants (
+  product text not null references public.inventory(product) on delete cascade,
+  size text not null,
+  stock_qty integer not null check (stock_qty >= 0),
+  primary key (product, size)
+);
+
 alter table public.inventory add column if not exists qr_code text;
 alter table public.inventory add column if not exists category text;
 alter table public.inventory add column if not exists size text;
@@ -38,6 +45,7 @@ alter table public.sales add column if not exists status text not null default '
 alter table public.sales add column if not exists payment_type text default 'cash';
 alter table public.sales add column if not exists customer_name text;
 alter table public.sales add column if not exists customer_phone text;
+alter table public.sales add column if not exists size text;
 
 do $$
 begin
@@ -99,6 +107,23 @@ on conflict (product) do update set
   color = excluded.color,
   reorder_level = excluded.reorder_level,
   updated_at = now();
+
+insert into public.inventory_variants (product, size, stock_qty)
+values
+  ('Classic T-Shirt', 'S', 15),
+  ('Classic T-Shirt', 'M', 20),
+  ('Classic T-Shirt', 'L', 15),
+  ('Denim Jacket', 'M', 8),
+  ('Denim Jacket', 'L', 12),
+  ('Summer Dress', 'S', 10),
+  ('Summer Dress', 'M', 15),
+  ('Hoodie', 'L', 8),
+  ('Hoodie', 'XL', 10),
+  ('Jeans', '30', 10),
+  ('Jeans', '32', 12),
+  ('Jeans', '34', 8)
+on conflict (product, size) do update set
+  stock_qty = excluded.stock_qty;
 
 create or replace function public.current_app_role()
 returns text
@@ -166,6 +191,59 @@ begin
 end;
 $$;
 
+create or replace function public.place_order_with_size(
+  p_sold_at date,
+  p_product text,
+  p_size text,
+  p_quantity integer
+)
+returns void
+language plpgsql
+as $$
+declare
+  v_stock integer;
+  v_price numeric(10,2);
+  v_cost numeric(10,2);
+begin
+  if p_quantity <= 0 then
+    raise exception 'Quantity must be greater than 0';
+  end if;
+
+  select stock_qty into v_stock
+  from public.inventory_variants
+  where product = p_product and size = p_size
+  for update;
+
+  if not found then
+    raise exception 'Size not found for product';
+  end if;
+  if v_stock < p_quantity then
+    raise exception 'Out of Stock';
+  end if;
+
+  select price_inr, cost_inr
+  into v_price, v_cost
+  from public.inventory
+  where product = p_product
+  for update;
+
+  update public.inventory_variants
+  set stock_qty = stock_qty - p_quantity
+  where product = p_product and size = p_size;
+
+  update public.inventory
+  set stock_qty = greatest(stock_qty - p_quantity, 0),
+      updated_by = auth.uid(),
+      updated_at = now()
+  where product = p_product;
+
+  insert into public.sales(sold_at, product, size, quantity, price_inr, cost_inr, status)
+  values (p_sold_at, p_product, p_size, p_quantity, v_price, v_cost, 'completed');
+
+  perform public.log_operation('place_order_with_size', p_product, jsonb_build_object('size', p_size, 'quantity', p_quantity));
+end;
+$$;
+
 create or replace function public.process_return(
   p_sale_id bigint,
   p_return_date date,
@@ -202,6 +280,12 @@ begin
       updated_at = now()
   where product = v_sale.product;
 
+  if coalesce(v_sale.size, '') <> '' then
+    update public.inventory_variants
+    set stock_qty = stock_qty + p_quantity
+    where product = v_sale.product and size = v_sale.size;
+  end if;
+
   update public.sales set status = 'returned' where id = p_sale_id;
 
   insert into public.returns(sale_id, product, quantity, return_date, reason, refund_amount, created_by)
@@ -236,6 +320,10 @@ begin
       updated_at = now()
   where product = v_product;
 
+  update public.inventory_variants
+  set stock_qty = stock_qty + v_quantity
+  where product = v_product and size = (select size from public.sales where id = p_sale_id);
+
   delete from public.sales where id = p_sale_id;
 
   perform public.log_operation('delete_sale', v_product, jsonb_build_object('sale_id', p_sale_id));
@@ -243,6 +331,7 @@ end;
 $$;
 
 alter table public.inventory enable row level security;
+alter table public.inventory_variants enable row level security;
 alter table public.sales enable row level security;
 alter table public.returns enable row level security;
 alter table public.app_users enable row level security;
@@ -253,6 +342,14 @@ create policy inventory_read_policy on public.inventory for select using (true);
 
 drop policy if exists inventory_write_policy on public.inventory;
 create policy inventory_write_policy on public.inventory for all
+using (public.current_app_role() = 'admin')
+with check (public.current_app_role() = 'admin');
+
+drop policy if exists inventory_variants_read_policy on public.inventory_variants;
+create policy inventory_variants_read_policy on public.inventory_variants for select using (true);
+
+drop policy if exists inventory_variants_write_policy on public.inventory_variants;
+create policy inventory_variants_write_policy on public.inventory_variants for all
 using (public.current_app_role() = 'admin')
 with check (public.current_app_role() = 'admin');
 

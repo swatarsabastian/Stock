@@ -9,6 +9,7 @@ const supabaseClient =
 
 const state = {
   inventory: [],
+  variants: [],
   sales: [],
   returns: [],
   role: "staff",
@@ -96,14 +97,27 @@ function getWeeklySummary(rows) {
 
 function updateSaleProductStockHint() {
   const product = ids("saleProduct").value;
+  const size = ids("saleSize").value;
   const item = state.inventory.find((i) => i.product === product);
-  ids("selectedStockInfo").textContent = !item || item.stockQty <= 0 ? "Out of Stock" : `${item.product}: ${item.stockQty} remaining`;
+  if (!item || item.stockQty <= 0) {
+    ids("selectedStockInfo").textContent = "Out of Stock";
+    return;
+  }
+  if (!size) {
+    ids("selectedStockInfo").textContent = `${item.product}: ${item.stockQty} remaining`;
+    return;
+  }
+  const variant = state.variants.find((v) => v.product === product && v.size === size);
+  ids("selectedStockInfo").textContent =
+    variant && variant.stockQty > 0 ? `${item.product} (${size}): ${variant.stockQty} remaining` : `Out of Stock (${size})`;
 }
 
 function renderInventoryOptions() {
   const select = ids("saleProduct");
+  const sizeSelect = ids("saleSize");
   const filterProduct = ids("filterProduct");
   const previousSaleProduct = select.value;
+  const previousSize = sizeSelect.value;
   const previousFilterProduct = filterProduct.value;
 
   select.innerHTML = "";
@@ -129,11 +143,61 @@ function renderInventoryOptions() {
   if (previousSaleProduct && state.inventory.some((item) => item.product === previousSaleProduct)) {
     select.value = previousSaleProduct;
   }
+  renderSaleSizeOptions(previousSize);
   if (previousFilterProduct && state.inventory.some((item) => item.product === previousFilterProduct)) {
     filterProduct.value = previousFilterProduct;
   }
 
   updateSaleProductStockHint();
+}
+
+function renderSaleSizeOptions(previousSize = "") {
+  const product = ids("saleProduct").value;
+  const sizeSelect = ids("saleSize");
+  const variants = state.variants.filter((v) => v.product === product);
+  sizeSelect.innerHTML = "";
+
+  if (!variants.length) {
+    sizeSelect.innerHTML = '<option value="">No sizes</option>';
+    sizeSelect.disabled = true;
+    return;
+  }
+
+  sizeSelect.disabled = false;
+  variants.forEach((v) => {
+    const opt = document.createElement("option");
+    opt.value = v.size;
+    opt.textContent = `${v.size} (${v.stockQty})`;
+    sizeSelect.appendChild(opt);
+  });
+
+  if (previousSize && variants.some((v) => v.size === previousSize)) {
+    sizeSelect.value = previousSize;
+  }
+}
+
+function parseVariantsInput(raw) {
+  if (!raw.trim()) return [];
+  const tokens = raw.split(",").map((t) => t.trim()).filter(Boolean);
+  const out = [];
+  for (const token of tokens) {
+    const [size, qtyRaw] = token.split(":").map((x) => (x || "").trim());
+    const qty = Number(qtyRaw);
+    if (!size || Number.isNaN(qty) || qty < 0) {
+      return null;
+    }
+    out.push({ size, stockQty: qty });
+  }
+  return out;
+}
+
+function syncTotalStockFromVariants() {
+  const parsed = parseVariantsInput(ids("inventoryVariants").value);
+  if (!parsed) {
+    ids("inventoryStockQty").value = "0";
+    return;
+  }
+  ids("inventoryStockQty").value = String(parsed.reduce((sum, v) => sum + v.stockQty, 0));
 }
 
 function renderSalesList() {
@@ -145,7 +209,9 @@ function renderSalesList() {
   }
   state.sales.slice().reverse().slice(0, 10).forEach((row) => {
     const li = document.createElement("li");
-    li.innerHTML = `<span class="record-label">${row.date} | ${row.product} | Qty ${row.quantity} | ${row.status} | ${formatMoney(
+    li.innerHTML = `<span class="record-label">${row.date} | ${row.product}${row.size ? ` (${row.size})` : ""} | Qty ${row.quantity} | ${
+      row.status
+    } | ${formatMoney(
       row.priceInr
     )}</span>`;
     const btn = document.createElement("button");
@@ -192,7 +258,7 @@ function renderReturnsUI() {
     returnableSales.forEach((s) => {
       const o = document.createElement("option");
       o.value = String(s.id);
-      o.textContent = `${s.date} | ${s.product} | Qty ${s.quantity}`;
+      o.textContent = `${s.date} | ${s.product}${s.size ? ` (${s.size})` : ""} | Qty ${s.quantity}`;
       select.appendChild(o);
     });
   }
@@ -236,7 +302,7 @@ function renderFilteredSales() {
   }
   rows.forEach((r) => {
     const li = document.createElement("li");
-    li.innerHTML = `<span class="record-label">${r.date} | ${r.product} | Qty ${r.quantity} | ${r.status} | ${formatMoney(
+    li.innerHTML = `<span class="record-label">${r.date} | ${r.product}${r.size ? ` (${r.size})` : ""} | Qty ${r.quantity} | ${r.status} | ${formatMoney(
       r.priceInr
     )}</span>`;
     list.appendChild(li);
@@ -253,9 +319,13 @@ function renderInventoryRecords() {
   }
   state.inventory.forEach((item) => {
     const li = document.createElement("li");
-    li.innerHTML = `<span class="record-label">${item.product} | Stock ${item.stockQty} | Cat ${item.category} | Size ${item.size} | Color ${item.color} | QR ${
-      item.qrCode || "-"
-    }</span>`;
+    const sizeLine = state.variants
+      .filter((v) => v.product === item.product)
+      .map((v) => `${v.size}:${v.stockQty}`)
+      .join(", ");
+    li.innerHTML = `<span class="record-label">${item.product} | Stock ${item.stockQty} | Sizes ${
+      sizeLine || "-"
+    } | Cat ${item.category} | Color ${item.color} | QR ${item.qrCode || "-"}</span>`;
 
     const right = document.createElement("div");
     right.className = "inventory-actions";
@@ -284,6 +354,7 @@ function setInventoryEditMode(item) {
   ids("inventorySubmitBtn").textContent = item ? "Update Inventory" : "Add Inventory";
   if (!item) {
     ids("inventoryForm").reset();
+    ids("inventoryStockQty").value = "0";
     return;
   }
   ids("inventoryProduct").value = item.product;
@@ -292,9 +363,10 @@ function setInventoryEditMode(item) {
   ids("inventoryCostInr").value = item.costInr;
   ids("inventoryQrCode").value = item.qrCode || "";
   ids("inventoryCategory").value = item.category || "";
-  ids("inventorySize").value = item.size || "";
   ids("inventoryColor").value = item.color || "";
   ids("inventoryReorderLevel").value = item.reorderLevel || 0;
+  const variants = state.variants.filter((v) => v.product === item.product);
+  ids("inventoryVariants").value = variants.map((v) => `${v.size}:${v.stockQty}`).join(",");
 }
 
 async function getCurrentUserRole() {
@@ -323,12 +395,13 @@ async function loadData() {
 
   let sales = [];
   let inventory = [];
+  let variants = [];
   let returnsData = [];
   let logs = [];
 
   let salesResult = await supabaseClient
     .from("sales")
-    .select("id, sold_at, product, quantity, price_inr, cost_inr, status")
+    .select("id, sold_at, product, size, quantity, price_inr, cost_inr, status")
     .gte("sold_at", from)
     .order("sold_at", { ascending: true });
   if (salesResult.error) {
@@ -356,6 +429,14 @@ async function loadData() {
   if (inventoryResult.error) throw new Error(inventoryResult.error.message);
   inventory = inventoryResult.data || [];
 
+  const variantsResult = await supabaseClient
+    .from("inventory_variants")
+    .select("product, size, stock_qty")
+    .order("product", { ascending: true });
+  if (!variantsResult.error) {
+    variants = variantsResult.data || [];
+  }
+
   const returnsResult = await supabaseClient
     .from("returns")
     .select("id, return_date, product, quantity, refund_amount")
@@ -380,7 +461,8 @@ async function loadData() {
     quantity: Number(r.quantity),
     priceInr: Number(r.price_inr),
     costInr: Number(r.cost_inr),
-    status: r.status || "completed"
+    status: r.status || "completed",
+    size: r.size || ""
   }));
 
   state.inventory = (inventory || []).map((r) => ({
@@ -393,6 +475,12 @@ async function loadData() {
     size: r.size || "-",
     color: r.color || "-",
     reorderLevel: Number(r.reorder_level || 0)
+  }));
+
+  state.variants = (variants || []).map((v) => ({
+    product: v.product,
+    size: v.size,
+    stockQty: Number(v.stock_qty)
   }));
 
   state.returns = (returnsData || []).map((r) => ({
@@ -450,22 +538,31 @@ async function addSale(event) {
   event.preventDefault();
   const soldAt = ids("saleDate").value;
   const product = ids("saleProduct").value;
+  const size = ids("saleSize").value;
   const quantity = Number(ids("saleQuantity").value);
-  if (!soldAt || !product || quantity <= 0) {
+  if (!soldAt || !product || !size || quantity <= 0) {
     ids("formMessage").textContent = "Please enter valid sale details.";
     return;
   }
-  const item = state.inventory.find((i) => i.product === product);
-  if (!item || item.stockQty < quantity) {
+  const variant = state.variants.find((v) => v.product === product && v.size === size);
+  if (!variant || variant.stockQty < quantity) {
     ids("formMessage").textContent = "Out of Stock";
     return;
   }
 
-  const { error } = await supabaseClient.rpc("place_order", {
+  let { error } = await supabaseClient.rpc("place_order_with_size", {
     p_sold_at: soldAt,
     p_product: product,
+    p_size: size,
     p_quantity: quantity
   });
+  if (error && error.message.toLowerCase().includes("function")) {
+    ({ error } = await supabaseClient.rpc("place_order", {
+      p_sold_at: soldAt,
+      p_product: product,
+      p_quantity: quantity
+    }));
+  }
   if (error) {
     ids("formMessage").textContent = error.message.toLowerCase().includes("out of stock") ? "Out of Stock" : error.message;
     return;
@@ -559,19 +656,20 @@ async function submitInventory(event) {
   event.preventDefault();
   const payload = {
     product: ids("inventoryProduct").value.trim(),
-    stock_qty: Number(ids("inventoryStockQty").value),
     price_inr: Number(ids("inventoryPriceInr").value),
     cost_inr: Number(ids("inventoryCostInr").value),
     qr_code: ids("inventoryQrCode").value.trim() || null,
     category: ids("inventoryCategory").value.trim() || null,
-    size: ids("inventorySize").value.trim() || null,
     color: ids("inventoryColor").value.trim() || null,
     reorder_level: Number(ids("inventoryReorderLevel").value || 0)
   };
-  if (!payload.product || payload.stock_qty < 0 || payload.price_inr < 0 || payload.cost_inr < 0) {
+  const variants = parseVariantsInput(ids("inventoryVariants").value);
+  if (!payload.product || !variants || payload.price_inr < 0 || payload.cost_inr < 0) {
     ids("inventoryMessage").textContent = "Please enter valid inventory details.";
     return;
   }
+  payload.stock_qty = variants.reduce((sum, v) => sum + v.stockQty, 0);
+  ids("inventoryStockQty").value = String(payload.stock_qty);
   if (state.role !== "admin") {
     ids("inventoryMessage").textContent = "Admin only action.";
     return;
@@ -587,6 +685,19 @@ async function submitInventory(event) {
     ids("inventoryMessage").textContent = error.message;
     return;
   }
+
+  const variantProduct = state.currentInventoryEditProduct || payload.product;
+  await supabaseClient.from("inventory_variants").delete().eq("product", variantProduct);
+  if (variants.length) {
+    await supabaseClient.from("inventory_variants").insert(
+      variants.map((v) => ({
+        product: variantProduct,
+        size: v.size,
+        stock_qty: v.stockQty
+      }))
+    );
+  }
+
   ids("inventoryMessage").textContent = state.currentInventoryEditProduct ? "Inventory updated." : "Inventory added.";
   setInventoryEditMode(null);
   await renderAll();
@@ -604,6 +715,7 @@ async function deleteInventory(product) {
     return;
   }
   ids("inventoryMessage").textContent = "Inventory deleted.";
+  await supabaseClient.from("inventory_variants").delete().eq("product", product);
   if (state.currentInventoryEditProduct === product) setInventoryEditMode(null);
   await renderAll();
 }
@@ -665,7 +777,12 @@ function bindEvents() {
   ids("inventoryForm").addEventListener("submit", submitInventory);
   ids("inventoryCancelEditBtn").addEventListener("click", () => setInventoryEditMode(null));
   ids("scanQrBtn").addEventListener("click", startQrScan);
-  ids("saleProduct").addEventListener("change", updateSaleProductStockHint);
+  ids("inventoryVariants").addEventListener("input", syncTotalStockFromVariants);
+  ids("saleProduct").addEventListener("change", () => {
+    renderSaleSizeOptions();
+    updateSaleProductStockHint();
+  });
+  ids("saleSize").addEventListener("change", updateSaleProductStockHint);
 
   Object.entries(menuMap).forEach(([key, { button }]) => button.addEventListener("click", () => showSection(key)));
 }

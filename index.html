@@ -77,6 +77,10 @@
               <select id="saleProduct" name="saleProduct" required></select>
             </label>
             <label>
+              Size
+              <select id="saleSize" name="saleSize"></select>
+            </label>
+            <label>
               Quantity
               <input id="saleQuantity" name="saleQuantity" type="number" min="1" step="1" required />
             </label>
@@ -174,7 +178,7 @@
             </label>
             <label>
               Stock Qty
-              <input id="inventoryStockQty" name="inventoryStockQty" type="number" min="0" step="1" required />
+              <input id="inventoryStockQty" name="inventoryStockQty" type="number" min="0" step="1" required readonly />
             </label>
             <label>
               Price (INR)
@@ -193,8 +197,8 @@
               <input id="inventoryCategory" name="inventoryCategory" type="text" placeholder="e.g. Tops" />
             </label>
             <label>
-              Size
-              <input id="inventorySize" name="inventorySize" type="text" placeholder="e.g. M" />
+              Sizes With Qty
+              <input id="inventoryVariants" name="inventoryVariants" type="text" placeholder="e.g. S:10,M:8,L:5" />
             </label>
             <label>
               Color
