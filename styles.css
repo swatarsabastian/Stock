@@ -1,0 +1,235 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #f4f6f8;
+  color: #1f2937;
+}
+
+.container {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 24px 16px 32px;
+}
+
+.header h1 {
+  margin-bottom: 6px;
+}
+
+.header p {
+  margin-top: 0;
+  color: #4b5563;
+}
+
+.menu-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.menu-links button {
+  border: 1px solid #d1d5db;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #1f2937;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.menu-links button.active-menu {
+  background: #0f766e;
+  color: #ffffff;
+  border-color: #0f766e;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 14px;
+  margin: 20px 0;
+}
+
+.two-column {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.card {
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 16px;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.08);
+}
+
+.card h2 {
+  margin-top: 0;
+  font-size: 1.08rem;
+}
+
+.big-value {
+  margin: 0;
+  font-size: 1.8rem;
+  font-weight: bold;
+  color: #0f766e;
+}
+
+.list {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.list li {
+  margin: 6px 0;
+}
+
+.summary-group h3 {
+  margin-bottom: 4px;
+}
+
+.summary-group p {
+  margin-top: 0;
+}
+
+.status-message {
+  margin: 14px 2px 0;
+  font-size: 0.92rem;
+  color: #6b7280;
+}
+
+.form-card {
+  margin-top: 14px;
+}
+
+.sale-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+  align-items: end;
+}
+
+.sale-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 0.9rem;
+  color: #374151;
+}
+
+.sale-form input {
+  padding: 9px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 0.95rem;
+}
+
+.sale-form select {
+  padding: 9px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  background: #fff;
+}
+
+.sale-form button {
+  padding: 10px 12px;
+  border: none;
+  border-radius: 8px;
+  background: #0f766e;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.sale-form button:hover {
+  background: #0d6660;
+}
+
+.inventory-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.inventory-actions button {
+  padding: 8px 12px;
+  border: none;
+  border-radius: 8px;
+  background: #374151;
+  color: #fff;
+  cursor: pointer;
+}
+
+.inventory-actions button:hover {
+  background: #1f2937;
+}
+
+.qr-video {
+  width: 100%;
+  max-width: 360px;
+  margin-top: 10px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+}
+
+.form-message {
+  margin: 10px 2px 0;
+  font-size: 0.9rem;
+  color: #4b5563;
+}
+
+.records-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.records-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.records-list li:last-child {
+  border-bottom: none;
+}
+
+.record-label {
+  font-size: 0.92rem;
+  color: #374151;
+}
+
+.delete-btn {
+  padding: 7px 10px;
+  border: none;
+  border-radius: 8px;
+  background: #dc2626;
+  color: #ffffff;
+  cursor: pointer;
+}
+
+.delete-btn:hover {
+  background: #b91c1c;
+}
+
+.delete-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.hidden-section {
+  display: none;
+}
+
+@media (max-width: 700px) {
+  .two-column {
+    grid-template-columns: 1fr;
+  }
+}

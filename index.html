@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Clothing Sales Dashboard</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="container">
+      <header class="header">
+        <h1>Clothing Business Sales Dashboard</h1>
+        <p>Simple sales overview with daily and weekly insights.</p>
+      </header>
+
+      <nav class="menu-links">
+        <button id="menuDashboard" type="button">Dashboard</button>
+        <button id="menuAddSale" type="button">Add Sale</button>
+        <button id="menuDeleteSale" type="button">Delete Sales</button>
+        <button id="menuReturns" type="button">Returns</button>
+        <button id="menuSalesFilters" type="button">Sales Filters</button>
+        <button id="menuInventory" type="button">Inventory</button>
+        <button id="menuSecurity" type="button">Security</button>
+      </nav>
+
+      <section id="dashboardSection">
+        <section class="stats-grid">
+          <article class="card">
+            <h2>Total Orders</h2>
+            <p id="totalOrders" class="big-value">0</p>
+          </article>
+          <article class="card">
+            <h2>Revenue</h2>
+            <p id="totalRevenue" class="big-value">₹0.00</p>
+          </article>
+          <article class="card">
+            <h2>Profit</h2>
+            <p id="totalProfit" class="big-value">₹0.00</p>
+          </article>
+        </section>
+
+        <section class="two-column">
+          <article class="card">
+            <h2>Best-Selling Products</h2>
+            <ul id="bestSellersList" class="list"></ul>
+          </article>
+
+          <article class="card">
+            <h2>Summary</h2>
+            <div class="summary-group">
+              <h3>Daily</h3>
+              <p id="dailySummary">-</p>
+            </div>
+            <div class="summary-group">
+              <h3>Weekly</h3>
+              <p id="weeklySummary">-</p>
+            </div>
+          </article>
+        </section>
+
+        <section class="card form-card">
+          <h2>Remaining Stock</h2>
+          <ul id="remainingStockList" class="records-list"></ul>
+        </section>
+      </section>
+
+      <section id="addSaleSection" class="hidden-section">
+        <section class="card form-card">
+          <h2>Add Sale</h2>
+          <form id="addSaleForm" class="sale-form">
+            <label>
+              Date
+              <input id="saleDate" name="saleDate" type="date" required />
+            </label>
+            <label>
+              Product
+              <select id="saleProduct" name="saleProduct" required></select>
+            </label>
+            <label>
+              Quantity
+              <input id="saleQuantity" name="saleQuantity" type="number" min="1" step="1" required />
+            </label>
+            <button type="submit">Save Sale</button>
+          </form>
+          <p id="selectedStockInfo" class="form-message"></p>
+          <p id="formMessage" class="form-message"></p>
+        </section>
+      </section>
+
+      <section id="deleteSaleSection" class="hidden-section">
+        <section class="card form-card">
+          <h2>Recent Sales (Delete)</h2>
+          <ul id="salesRecordsList" class="records-list"></ul>
+        </section>
+      </section>
+
+      <section id="returnsSection" class="hidden-section">
+        <section class="card form-card">
+          <h2>Returns Management</h2>
+          <form id="returnsForm" class="sale-form">
+            <label>
+              Sale Record
+              <select id="returnSaleId" required></select>
+            </label>
+            <label>
+              Return Date
+              <input id="returnDate" type="date" required />
+            </label>
+            <label>
+              Quantity
+              <input id="returnQuantity" type="number" min="1" step="1" required />
+            </label>
+            <label>
+              Reason
+              <input id="returnReason" type="text" placeholder="Damaged, size issue..." />
+            </label>
+            <button type="submit">Process Return</button>
+          </form>
+          <p id="returnsMessage" class="form-message"></p>
+        </section>
+        <section class="card form-card">
+          <h2>Recent Returns</h2>
+          <ul id="returnsRecordsList" class="records-list"></ul>
+        </section>
+      </section>
+
+      <section id="salesFiltersSection" class="hidden-section">
+        <section class="card form-card">
+          <h2>Sales Filters</h2>
+          <form id="salesFiltersForm" class="sale-form">
+            <label>
+              From
+              <input id="filterFromDate" type="date" />
+            </label>
+            <label>
+              To
+              <input id="filterToDate" type="date" />
+            </label>
+            <label>
+              Product
+              <select id="filterProduct">
+                <option value="">All products</option>
+              </select>
+            </label>
+            <label>
+              Status
+              <select id="filterStatus">
+                <option value="">All</option>
+                <option value="completed">Completed</option>
+                <option value="returned">Returned</option>
+              </select>
+            </label>
+            <button type="submit">Apply</button>
+          </form>
+          <div class="inventory-actions">
+            <button id="clearFiltersBtn" type="button">Clear Filters</button>
+            <button id="exportCsvBtn" type="button">Export CSV</button>
+          </div>
+          <p id="filtersMessage" class="form-message"></p>
+        </section>
+        <section class="card form-card">
+          <h2>Filtered Sales</h2>
+          <ul id="filteredSalesList" class="records-list"></ul>
+        </section>
+      </section>
+
+      <section id="inventorySection" class="hidden-section">
+        <section class="card form-card">
+          <h2>Inventory (Add / Edit / Delete)</h2>
+          <form id="inventoryForm" class="sale-form">
+            <label>
+              Product
+              <input id="inventoryProduct" name="inventoryProduct" type="text" required />
+            </label>
+            <label>
+              Stock Qty
+              <input id="inventoryStockQty" name="inventoryStockQty" type="number" min="0" step="1" required />
+            </label>
+            <label>
+              Price (INR)
+              <input id="inventoryPriceInr" name="inventoryPriceInr" type="number" min="0" step="0.01" required />
+            </label>
+            <label>
+              Cost (INR)
+              <input id="inventoryCostInr" name="inventoryCostInr" type="number" min="0" step="0.01" required />
+            </label>
+            <label>
+              QR Code
+              <input id="inventoryQrCode" name="inventoryQrCode" type="text" placeholder="e.g. SKU-TSHIRT-001" />
+            </label>
+            <label>
+              Category
+              <input id="inventoryCategory" name="inventoryCategory" type="text" placeholder="e.g. Tops" />
+            </label>
+            <label>
+              Size
+              <input id="inventorySize" name="inventorySize" type="text" placeholder="e.g. M" />
+            </label>
+            <label>
+              Color
+              <input id="inventoryColor" name="inventoryColor" type="text" placeholder="e.g. Black" />
+            </label>
+            <label>
+              Reorder Level
+              <input id="inventoryReorderLevel" name="inventoryReorderLevel" type="number" min="0" step="1" value="0" />
+            </label>
+            <button id="inventorySubmitBtn" type="submit">Add Inventory</button>
+          </form>
+          <div class="inventory-actions">
+            <button id="scanQrBtn" type="button">Scan QR</button>
+            <button id="inventoryCancelEditBtn" type="button" class="delete-btn hidden-section">Cancel Edit</button>
+          </div>
+          <video id="qrVideo" class="qr-video hidden-section" autoplay muted playsinline></video>
+          <p id="inventoryMessage" class="form-message"></p>
+        </section>
+
+        <section class="card form-card">
+          <h2>Inventory Records</h2>
+          <ul id="inventoryRecordsList" class="records-list"></ul>
+        </section>
+      </section>
+
+      <section id="securitySection" class="hidden-section">
+        <section class="card form-card">
+          <h2>Security & Reliability</h2>
+          <p id="currentUserInfo" class="form-message">Checking user...</p>
+          <p id="currentRoleInfo" class="form-message">Role: -</p>
+        </section>
+        <section class="card form-card">
+          <h2>Operation Logs</h2>
+          <ul id="operationLogsList" class="records-list"></ul>
+        </section>
+      </section>
+      <p id="statusMessage" class="status-message"></p>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+    <script src="script.js"></script>
+  </body>
+</html>
