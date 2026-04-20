@@ -3,14 +3,16 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Clothing Sales Dashboard</title>
+    <title>TINY THREADS | Sales Dashboard</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
     <main class="container">
       <header class="header">
-        <h1>Clothing Business Sales Dashboard</h1>
-        <p>Simple sales overview with daily and weekly insights.</p>
+        <p class="brand-tag">TINY THREADS</p>
+        <h1>Sales & Inventory Dashboard</h1>
+        <p>Smart daily control for orders, stock, returns, and growth.</p>
+        <p id="roleBadge" class="role-badge">Role: -</p>
       </header>
 
       <nav class="menu-links">
@@ -95,6 +97,7 @@
         <section class="card form-card">
           <h2>Recent Sales (Delete)</h2>
           <ul id="salesRecordsList" class="records-list"></ul>
+          <p id="deleteMessage" class="form-message"></p>
         </section>
       </section>
 
@@ -227,8 +230,13 @@
       <section id="securitySection" class="hidden-section">
         <section class="card form-card">
           <h2>Security & Reliability</h2>
-          <p id="currentUserInfo" class="form-message">Checking user...</p>
-          <p id="currentRoleInfo" class="form-message">Role: -</p>
+          <p id="currentUserInfo" class="form-message">User: local mode</p>
+          <p id="currentRoleInfo" class="form-message">Role: admin</p>
+        </section>
+        <section class="card form-card">
+          <h2>Admin User Management</h2>
+          <p id="usersAdminHint" class="form-message">Only admin can change roles.</p>
+          <ul id="userRolesList" class="records-list"></ul>
         </section>
         <section class="card form-card">
           <h2>Operation Logs</h2>

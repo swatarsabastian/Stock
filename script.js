@@ -12,6 +12,7 @@ const state = {
   variants: [],
   sales: [],
   returns: [],
+  users: [],
   role: "staff",
   userEmail: "Not signed in",
   currentInventoryEditProduct: null,
@@ -51,6 +52,49 @@ function enforceRoleUI() {
   document.querySelectorAll(".delete-btn").forEach((btn) => {
     btn.disabled = !canDelete;
     btn.title = canDelete ? "" : "Admin only";
+  });
+}
+
+function renderUserRoles() {
+  const list = ids("userRolesList");
+  const hint = ids("usersAdminHint");
+  list.innerHTML = "";
+
+  if (!state.users.length) {
+    list.innerHTML = '<li><span class="record-label">No user profiles found.</span></li>';
+    return;
+  }
+
+  hint.textContent =
+    state.role === "admin" ? "You can assign roles below." : "Only admin can change roles.";
+
+  state.users.forEach((user) => {
+    const li = document.createElement("li");
+    const label = document.createElement("span");
+    label.className = "record-label";
+    label.textContent = `${user.displayName} | ${user.userId}`;
+
+    const right = document.createElement("div");
+    right.className = "inventory-actions";
+
+    const roleSelect = document.createElement("select");
+    roleSelect.innerHTML = '<option value="staff">staff</option><option value="admin">admin</option>';
+    roleSelect.value = user.role || "staff";
+    roleSelect.disabled = state.role !== "admin";
+
+    const saveBtn = document.createElement("button");
+    saveBtn.type = "button";
+    saveBtn.textContent = "Update Role";
+    saveBtn.disabled = state.role !== "admin";
+    saveBtn.addEventListener("click", async () => {
+      await updateUserRole(user.userId, roleSelect.value);
+    });
+
+    right.appendChild(roleSelect);
+    right.appendChild(saveBtn);
+    li.appendChild(label);
+    li.appendChild(right);
+    list.appendChild(li);
   });
 }
 
@@ -370,21 +414,8 @@ function setInventoryEditMode(item) {
 }
 
 async function getCurrentUserRole() {
-  if (!supabaseClient) return;
-  const { data } = await supabaseClient.auth.getUser();
-  if (!data?.user) {
-    state.role = "admin";
-    state.userEmail = "Not signed in (Dev mode admin)";
-    return;
-  }
-
-  state.userEmail = data.user.email || data.user.id;
-  const { data: profile } = await supabaseClient
-    .from("app_users")
-    .select("role")
-    .eq("user_id", data.user.id)
-    .maybeSingle();
-  state.role = profile?.role || "staff";
+  state.role = "admin";
+  state.userEmail = "Local mode";
 }
 
 async function loadData() {
@@ -398,6 +429,7 @@ async function loadData() {
   let variants = [];
   let returnsData = [];
   let logs = [];
+  let users = [];
 
   let salesResult = await supabaseClient
     .from("sales")
@@ -454,6 +486,14 @@ async function loadData() {
     logs = logsResult.data || [];
   }
 
+  const usersResult = await supabaseClient
+    .from("app_users")
+    .select("user_id, display_name, role")
+    .order("created_at", { ascending: true });
+  if (!usersResult.error) {
+    users = usersResult.data || [];
+  }
+
   state.sales = (sales || []).map((r) => ({
     id: String(r.id),
     date: r.sold_at,
@@ -489,6 +529,12 @@ async function loadData() {
     product: r.product,
     quantity: Number(r.quantity),
     refundAmount: Number(r.refund_amount)
+  }));
+
+  state.users = users.map((u) => ({
+    userId: u.user_id,
+    displayName: u.display_name || "User",
+    role: u.role || "staff"
   }));
 
   const logsList = ids("operationLogsList");
@@ -527,11 +573,28 @@ async function renderAll() {
   renderReturnsUI();
   renderFilteredSales();
   renderInventoryRecords();
+  renderUserRoles();
 
   ids("currentUserInfo").textContent = `User: ${state.userEmail}`;
   ids("currentRoleInfo").textContent = `Role: ${state.role}`;
+  ids("roleBadge").textContent = `Role: ${state.role.toUpperCase()}`;
   ids("statusMessage").textContent = "Connected to Supabase. Auto-refreshing every 5 seconds.";
   enforceRoleUI();
+}
+
+async function updateUserRole(userId, role) {
+  if (state.role !== "admin") {
+    ids("usersAdminHint").textContent = "Admin only action.";
+    return;
+  }
+
+  const { error } = await supabaseClient.from("app_users").update({ role }).eq("user_id", userId);
+  if (error) {
+    ids("usersAdminHint").textContent = `Role update failed: ${error.message}`;
+    return;
+  }
+  ids("usersAdminHint").textContent = "Role updated.";
+  await renderAll();
 }
 
 async function addSale(event) {
@@ -575,16 +638,17 @@ async function addSale(event) {
 
 async function deleteSale(saleId) {
   if (state.role !== "admin") {
-    ids("formMessage").textContent = "Admin only action.";
+    ids("deleteMessage").textContent = "Admin only action.";
     return;
   }
   if (!window.confirm("Delete this sale record?")) return;
-  const { error } = await supabaseClient.rpc("delete_sale_and_restore_stock", { p_sale_id: saleId });
+  ids("deleteMessage").textContent = "Deleting...";
+  const { error } = await supabaseClient.rpc("delete_sale_and_restore_stock", { p_sale_id: Number(saleId) });
   if (error) {
-    ids("formMessage").textContent = error.message;
+    ids("deleteMessage").textContent = `Delete failed: ${error.message}`;
     return;
   }
-  ids("formMessage").textContent = "Sale deleted.";
+  ids("deleteMessage").textContent = "Sale deleted successfully.";
   await renderAll();
 }
 

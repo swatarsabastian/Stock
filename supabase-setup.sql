@@ -305,10 +305,6 @@ declare
   v_product text;
   v_quantity integer;
 begin
-  if public.current_app_role() <> 'admin' then
-    raise exception 'Admin only action';
-  end if;
-
   select product, quantity into v_product, v_quantity from public.sales where id = p_sale_id for update;
   if not found then
     raise exception 'Sale record not found';
@@ -365,6 +361,11 @@ for update
 using (true)
 with check (true);
 
+drop policy if exists sales_delete_policy on public.sales;
+create policy sales_delete_policy on public.sales
+for delete
+using (true);
+
 drop policy if exists returns_read_policy on public.returns;
 create policy returns_read_policy on public.returns for select using (true);
 
@@ -373,6 +374,17 @@ create policy returns_insert_policy on public.returns for insert with check (tru
 
 drop policy if exists app_users_read_policy on public.app_users;
 create policy app_users_read_policy on public.app_users for select using (auth.uid() = user_id or public.current_app_role() = 'admin');
+
+drop policy if exists app_users_insert_policy on public.app_users;
+create policy app_users_insert_policy on public.app_users
+for insert
+with check (auth.uid() = user_id or public.current_app_role() = 'admin');
+
+drop policy if exists app_users_update_policy on public.app_users;
+create policy app_users_update_policy on public.app_users
+for update
+using (public.current_app_role() = 'admin')
+with check (public.current_app_role() = 'admin');
 
 drop policy if exists operation_logs_read_policy on public.operation_logs;
 create policy operation_logs_read_policy on public.operation_logs for select using (true);
