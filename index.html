@@ -64,6 +64,11 @@
           <h2>Remaining Stock</h2>
           <ul id="remainingStockList" class="records-list"></ul>
         </section>
+
+        <section class="card form-card">
+          <h2>Purchase Medium</h2>
+          <ul id="purchaseMediumList" class="records-list"></ul>
+        </section>
       </section>
 
       <section id="addSaleSection" class="hidden-section">
@@ -85,6 +90,19 @@
             <label>
               Quantity
               <input id="saleQuantity" name="saleQuantity" type="number" min="1" step="1" required />
+            </label>
+            <label>
+              Purchase Medium
+              <select id="salePurchaseMedium" name="salePurchaseMedium" required>
+                <option value="MEESHO">MEESHO</option>
+                <option value="FLIPKART">FLIPKART</option>
+                <option value="AMAZON">AMAZON</option>
+                <option value="MYNTRA">MYNTRA</option>
+                <option value="INSTAGRAM">INSTAGRAM</option>
+                <option value="WEBSITE">WEBSITE</option>
+                <option value="WHATSAPP">WHATSAPP</option>
+                <option value="STORE">STORE</option>
+              </select>
             </label>
             <button type="submit">Save Sale</button>
           </form>

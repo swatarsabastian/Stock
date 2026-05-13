@@ -1,5 +1,6 @@
 const REFRESH_INTERVAL_MS = 5000;
 const SALES_LOOKBACK_DAYS = 30;
+const DEFAULT_PURCHASE_MEDIUM = "STORE";
 
 const supabaseConfig = window.SUPABASE_CONFIG || {};
 const supabaseUrl = supabaseConfig.url;
@@ -246,6 +247,7 @@ function syncTotalStockFromVariants() {
 
 function renderSalesList() {
   const list = ids("salesRecordsList");
+  if (!list) return;
   list.innerHTML = "";
   if (!state.sales.length) {
     list.innerHTML = '<li><span class="record-label">No sales rows found.</span></li>';
@@ -253,9 +255,7 @@ function renderSalesList() {
   }
   state.sales.slice().reverse().slice(0, 10).forEach((row) => {
     const li = document.createElement("li");
-    li.innerHTML = `<span class="record-label">${row.date} | ${row.product}${row.size ? ` (${row.size})` : ""} | Qty ${row.quantity} | ${
-      row.status
-    } | ${formatMoney(
+    li.innerHTML = `<span class="record-label">${row.date} | ${row.product}${row.size ? ` (${row.size})` : ""} | Qty ${row.quantity} | ${row.status} | ${row.purchaseMedium} | ${formatMoney(
       row.priceInr
     )}</span>`;
     const btn = document.createElement("button");
@@ -283,6 +283,80 @@ function renderRemainingStock() {
     li.innerHTML = `<span class="record-label">${item.product} | ${status}${marker}</span>`;
     list.appendChild(li);
   });
+}
+
+function renderPurchaseMediumSummary() {
+  const list = ids("purchaseMediumList");
+  list.innerHTML = "";
+  if (!state.sales.length) {
+    list.innerHTML = '<li><span class="record-label">No sales data available.</span></li>';
+    return;
+  }
+
+  const mediumMap = state.sales.reduce((acc, sale) => {
+    const medium = sale.purchaseMedium || DEFAULT_PURCHASE_MEDIUM;
+    acc[medium] = (acc[medium] || 0) + Number(sale.quantity);
+    return acc;
+  }, {});
+
+  Object.entries(mediumMap)
+    .sort((a, b) => b[1] - a[1])
+    .forEach(([medium, quantity]) => {
+      const li = document.createElement("li");
+      li.innerHTML = `<span class="record-label">${medium} | ${quantity} items sold</span>`;
+      list.appendChild(li);
+    });
+}
+
+function normalizePurchaseMedium(value) {
+  const raw = String(value || "").trim().toUpperCase();
+  return raw || DEFAULT_PURCHASE_MEDIUM;
+}
+
+function isFunctionSignatureError(error) {
+  if (!error || !error.message) return false;
+  const message = error.message.toLowerCase();
+  return message.includes("function") || message.includes("does not exist");
+}
+
+async function callPlaceOrderWithMedium({ soldAt, product, size, quantity, purchaseMedium }) {
+  let response = await supabaseClient.rpc("place_order_with_size", {
+    p_sold_at: soldAt,
+    p_product: product,
+    p_size: size,
+    p_quantity: quantity,
+    p_purchase_medium: purchaseMedium
+  });
+  if (!response.error) return null;
+
+  if (isFunctionSignatureError(response.error)) {
+    response = await supabaseClient.rpc("place_order_with_size", {
+      p_sold_at: soldAt,
+      p_product: product,
+      p_size: size,
+      p_quantity: quantity
+    });
+    if (!response.error) return null;
+  }
+
+  if (isFunctionSignatureError(response.error)) {
+    response = await supabaseClient.rpc("place_order", {
+      p_sold_at: soldAt,
+      p_product: product,
+      p_quantity: quantity,
+      p_purchase_medium: purchaseMedium
+    });
+    if (!response.error) return null;
+  }
+
+  if (isFunctionSignatureError(response.error)) {
+    response = await supabaseClient.rpc("place_order", {
+      p_sold_at: soldAt,
+      p_product: product,
+      p_quantity: quantity
+    });
+  }
+  return response.error || null;
 }
 
 function renderReturnsUI() {
@@ -346,7 +420,7 @@ function renderFilteredSales() {
   }
   rows.forEach((r) => {
     const li = document.createElement("li");
-    li.innerHTML = `<span class="record-label">${r.date} | ${r.product}${r.size ? ` (${r.size})` : ""} | Qty ${r.quantity} | ${r.status} | ${formatMoney(
+    li.innerHTML = `<span class="record-label">${r.date} | ${r.product}${r.size ? ` (${r.size})` : ""} | Qty ${r.quantity} | ${r.status} | ${r.purchaseMedium} | ${formatMoney(
       r.priceInr
     )}</span>`;
     list.appendChild(li);
@@ -433,7 +507,7 @@ async function loadData() {
 
   let salesResult = await supabaseClient
     .from("sales")
-    .select("id, sold_at, product, size, quantity, price_inr, cost_inr, status")
+    .select("id, sold_at, product, size, quantity, price_inr, cost_inr, status, purchase_medium")
     .gte("sold_at", from)
     .order("sold_at", { ascending: true });
   if (salesResult.error) {
@@ -502,7 +576,8 @@ async function loadData() {
     priceInr: Number(r.price_inr),
     costInr: Number(r.cost_inr),
     status: r.status || "completed",
-    size: r.size || ""
+    size: r.size || "",
+    purchaseMedium: normalizePurchaseMedium(r.purchase_medium)
   }));
 
   state.inventory = (inventory || []).map((r) => ({
@@ -569,6 +644,7 @@ async function renderAll() {
 
   renderRemainingStock();
   renderInventoryOptions();
+  renderPurchaseMediumSummary();
   renderSalesList();
   renderReturnsUI();
   renderFilteredSales();
@@ -603,6 +679,7 @@ async function addSale(event) {
   const product = ids("saleProduct").value;
   const size = ids("saleSize").value;
   const quantity = Number(ids("saleQuantity").value);
+  const purchaseMedium = normalizePurchaseMedium(ids("salePurchaseMedium").value);
   if (!soldAt || !product || !size || quantity <= 0) {
     ids("formMessage").textContent = "Please enter valid sale details.";
     return;
@@ -613,19 +690,7 @@ async function addSale(event) {
     return;
   }
 
-  let { error } = await supabaseClient.rpc("place_order_with_size", {
-    p_sold_at: soldAt,
-    p_product: product,
-    p_size: size,
-    p_quantity: quantity
-  });
-  if (error && error.message.toLowerCase().includes("function")) {
-    ({ error } = await supabaseClient.rpc("place_order", {
-      p_sold_at: soldAt,
-      p_product: product,
-      p_quantity: quantity
-    }));
-  }
+  const error = await callPlaceOrderWithMedium({ soldAt, product, size, quantity, purchaseMedium });
   if (error) {
     ids("formMessage").textContent = error.message.toLowerCase().includes("out of stock") ? "Out of Stock" : error.message;
     return;
@@ -704,8 +769,10 @@ function exportFilteredSalesCsv() {
     ids("filtersMessage").textContent = "Nothing to export.";
     return;
   }
-  const header = "date,product,quantity,status,price_inr,cost_inr";
-  const lines = rows.map((r) => [r.date, r.product, r.quantity, r.status, r.priceInr, r.costInr].join(","));
+  const header = "date,product,size,quantity,status,purchase_medium,price_inr,cost_inr";
+  const lines = rows.map((r) =>
+    [r.date, r.product, r.size || "", r.quantity, r.status, r.purchaseMedium, r.priceInr, r.costInr].join(",")
+  );
   const blob = new Blob([[header, ...lines].join("\n")], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
