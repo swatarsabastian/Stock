@@ -114,6 +114,21 @@
       <section id="deleteSaleSection" class="hidden-section">
         <section class="card form-card">
           <h2>Recent Sales (Delete)</h2>
+          <form id="deleteSaleFiltersForm" class="sale-form">
+            <label>
+              Product
+              <input id="deleteSaleFilterProduct" type="text" placeholder="Search by product name" />
+            </label>
+            <label>
+              QR Code
+              <input id="deleteSaleFilterQrCode" type="text" placeholder="Search by QR code" />
+            </label>
+            <button type="submit">Apply</button>
+          </form>
+          <div class="inventory-actions">
+            <button id="clearDeleteSaleFiltersBtn" type="button">Clear Filters</button>
+          </div>
+          <p id="deleteSaleFiltersMessage" class="form-message"></p>
           <ul id="salesRecordsList" class="records-list"></ul>
           <p id="deleteMessage" class="form-message"></p>
         </section>
@@ -241,6 +256,29 @@
 
         <section class="card form-card">
           <h2>Inventory Records</h2>
+          <form id="inventoryFiltersForm" class="sale-form">
+            <label>
+              Product
+              <input id="inventoryFilterProduct" type="text" placeholder="Search by product name" />
+            </label>
+            <label>
+              QR Code
+              <input id="inventoryFilterQrCode" type="text" placeholder="Search by QR code" />
+            </label>
+            <label>
+              Category
+              <input id="inventoryFilterCategory" type="text" placeholder="Search by category" />
+            </label>
+            <label>
+              Color
+              <input id="inventoryFilterColor" type="text" placeholder="Search by color" />
+            </label>
+            <button type="submit">Apply</button>
+          </form>
+          <div class="inventory-actions">
+            <button id="clearInventoryFiltersBtn" type="button">Clear Filters</button>
+          </div>
+          <p id="inventoryFiltersMessage" class="form-message"></p>
           <ul id="inventoryRecordsList" class="records-list"></ul>
         </section>
       </section>

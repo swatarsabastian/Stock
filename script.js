@@ -17,7 +17,9 @@ const state = {
   role: "staff",
   userEmail: "Not signed in",
   currentInventoryEditProduct: null,
-  filters: { from: "", to: "", product: "", status: "" }
+  filters: { from: "", to: "", product: "", status: "" },
+  inventoryFilters: { product: "", qrCode: "", category: "", color: "" },
+  deleteSaleFilters: { product: "", qrCode: "" }
 };
 
 const ids = (id) => document.getElementById(id);
@@ -245,17 +247,67 @@ function syncTotalStockFromVariants() {
   ids("inventoryStockQty").value = String(parsed.reduce((sum, v) => sum + v.stockQty, 0));
 }
 
+function inventoryQrForProduct(product) {
+  const item = state.inventory.find((i) => i.product === product);
+  return item?.qrCode || "";
+}
+
+function getFilteredDeleteSales() {
+  const { product, qrCode } = state.deleteSaleFilters;
+  return state.sales.filter((row) => {
+    if (!inventoryMatchesFilter(row.product, product)) return false;
+    if (!inventoryMatchesFilter(inventoryQrForProduct(row.product), qrCode)) return false;
+    return true;
+  });
+}
+
+function getSalesForDeleteList() {
+  const rows = getFilteredDeleteSales().slice().reverse();
+  const hasFilters = Object.values(state.deleteSaleFilters).some(Boolean);
+  return hasFilters ? rows : rows.slice(0, 10);
+}
+
+function syncDeleteSaleFilterInputs() {
+  ids("deleteSaleFilterProduct").value = state.deleteSaleFilters.product;
+  ids("deleteSaleFilterQrCode").value = state.deleteSaleFilters.qrCode;
+}
+
+function applyDeleteSaleFilters(event) {
+  event.preventDefault();
+  state.deleteSaleFilters = {
+    product: ids("deleteSaleFilterProduct").value.trim(),
+    qrCode: ids("deleteSaleFilterQrCode").value.trim()
+  };
+  renderSalesList();
+}
+
+function clearDeleteSaleFilters() {
+  state.deleteSaleFilters = { product: "", qrCode: "" };
+  ids("deleteSaleFiltersForm").reset();
+  renderSalesList();
+}
+
 function renderSalesList() {
   const list = ids("salesRecordsList");
+  const msg = ids("deleteSaleFiltersMessage");
   if (!list) return;
+  const hasFilters = Object.values(state.deleteSaleFilters).some(Boolean);
+  const rows = getSalesForDeleteList();
   list.innerHTML = "";
   if (!state.sales.length) {
     list.innerHTML = '<li><span class="record-label">No sales rows found.</span></li>';
+    if (msg) msg.textContent = "";
     return;
   }
-  state.sales.slice().reverse().slice(0, 10).forEach((row) => {
+  if (!rows.length) {
+    list.innerHTML = '<li><span class="record-label">No sales match your search.</span></li>';
+    if (msg) msg.textContent = hasFilters ? "0 records found" : "";
+    return;
+  }
+  rows.forEach((row) => {
+    const qr = inventoryQrForProduct(row.product);
     const li = document.createElement("li");
-    li.innerHTML = `<span class="record-label">${row.date} | ${row.product}${row.size ? ` (${row.size})` : ""} | Qty ${row.quantity} | ${row.status} | ${row.purchaseMedium} | ${formatMoney(
+    li.innerHTML = `<span class="record-label">${row.date} | ${row.product}${row.size ? ` (${row.size})` : ""} | Qty ${row.quantity} | ${row.status} | ${row.purchaseMedium} | QR ${qr || "-"} | ${formatMoney(
       row.priceInr
     )}</span>`;
     const btn = document.createElement("button");
@@ -266,6 +318,11 @@ function renderSalesList() {
     li.appendChild(btn);
     list.appendChild(li);
   });
+  if (msg) {
+    msg.textContent = hasFilters
+      ? `${rows.length} record${rows.length === 1 ? "" : "s"} found`
+      : `Showing ${rows.length} most recent sale${rows.length === 1 ? "" : "s"}`;
+  }
 }
 
 function renderRemainingStock() {
@@ -428,14 +485,67 @@ function renderFilteredSales() {
   ids("filtersMessage").textContent = `${rows.length} records found`;
 }
 
+function inventoryFieldText(value) {
+  const text = String(value || "").trim();
+  return text === "-" ? "" : text;
+}
+
+function inventoryMatchesFilter(value, query) {
+  if (!query) return true;
+  return inventoryFieldText(value).toLowerCase().includes(query.toLowerCase());
+}
+
+function getFilteredInventory() {
+  const { product, qrCode, category, color } = state.inventoryFilters;
+  return state.inventory.filter((item) => {
+    if (!inventoryMatchesFilter(item.product, product)) return false;
+    if (!inventoryMatchesFilter(item.qrCode, qrCode)) return false;
+    if (!inventoryMatchesFilter(item.category, category)) return false;
+    if (!inventoryMatchesFilter(item.color, color)) return false;
+    return true;
+  });
+}
+
+function syncInventoryFilterInputs() {
+  ids("inventoryFilterProduct").value = state.inventoryFilters.product;
+  ids("inventoryFilterQrCode").value = state.inventoryFilters.qrCode;
+  ids("inventoryFilterCategory").value = state.inventoryFilters.category;
+  ids("inventoryFilterColor").value = state.inventoryFilters.color;
+}
+
+function applyInventoryFilters(event) {
+  event.preventDefault();
+  state.inventoryFilters = {
+    product: ids("inventoryFilterProduct").value.trim(),
+    qrCode: ids("inventoryFilterQrCode").value.trim(),
+    category: ids("inventoryFilterCategory").value.trim(),
+    color: ids("inventoryFilterColor").value.trim()
+  };
+  renderInventoryRecords();
+}
+
+function clearInventoryFilters() {
+  state.inventoryFilters = { product: "", qrCode: "", category: "", color: "" };
+  ids("inventoryFiltersForm").reset();
+  renderInventoryRecords();
+}
+
 function renderInventoryRecords() {
   const list = ids("inventoryRecordsList");
+  const rows = getFilteredInventory();
+  const hasFilters = Object.values(state.inventoryFilters).some(Boolean);
   list.innerHTML = "";
   if (!state.inventory.length) {
     list.innerHTML = '<li><span class="record-label">No inventory found.</span></li>';
+    ids("inventoryFiltersMessage").textContent = "";
     return;
   }
-  state.inventory.forEach((item) => {
+  if (!rows.length) {
+    list.innerHTML = '<li><span class="record-label">No inventory matches your search.</span></li>';
+    ids("inventoryFiltersMessage").textContent = hasFilters ? "0 records found" : "";
+    return;
+  }
+  rows.forEach((item) => {
     const li = document.createElement("li");
     const sizeLine = state.variants
       .filter((v) => v.product === item.product)
@@ -463,6 +573,9 @@ function renderInventoryRecords() {
     li.appendChild(right);
     list.appendChild(li);
   });
+  ids("inventoryFiltersMessage").textContent = hasFilters
+    ? `${rows.length} record${rows.length === 1 ? "" : "s"} found`
+    : `${state.inventory.length} record${state.inventory.length === 1 ? "" : "s"}`;
 }
 
 function setInventoryEditMode(item) {
@@ -645,9 +758,11 @@ async function renderAll() {
   renderRemainingStock();
   renderInventoryOptions();
   renderPurchaseMediumSummary();
+  syncDeleteSaleFilterInputs();
   renderSalesList();
   renderReturnsUI();
   renderFilteredSales();
+  syncInventoryFilterInputs();
   renderInventoryRecords();
   renderUserRoles();
 
@@ -906,6 +1021,10 @@ function bindEvents() {
   ids("clearFiltersBtn").addEventListener("click", clearSalesFilters);
   ids("exportCsvBtn").addEventListener("click", exportFilteredSalesCsv);
   ids("inventoryForm").addEventListener("submit", submitInventory);
+  ids("inventoryFiltersForm").addEventListener("submit", applyInventoryFilters);
+  ids("clearInventoryFiltersBtn").addEventListener("click", clearInventoryFilters);
+  ids("deleteSaleFiltersForm").addEventListener("submit", applyDeleteSaleFilters);
+  ids("clearDeleteSaleFiltersBtn").addEventListener("click", clearDeleteSaleFilters);
   ids("inventoryCancelEditBtn").addEventListener("click", () => setInventoryEditMode(null));
   ids("scanQrBtn").addEventListener("click", startQrScan);
   ids("inventoryVariants").addEventListener("input", syncTotalStockFromVariants);
