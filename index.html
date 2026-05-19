@@ -3,39 +3,44 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>TINY THREADS | Sales Dashboard</title>
+    <title>TINY THREADS | Boutique Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
     <main class="container">
       <header class="header">
         <p class="brand-tag">TINY THREADS</p>
-        <h1>Sales & Inventory Dashboard</h1>
-        <p>Smart daily control for orders, stock, returns, and growth.</p>
+        <h1>Boutique Sales & Inventory</h1>
+        <p>Elegant control for orders, stock, returns, and boutique growth.</p>
         <p id="roleBadge" class="role-badge">Role: -</p>
       </header>
 
-      <nav class="menu-links">
-        <button id="menuDashboard" type="button">Dashboard</button>
-        <button id="menuAddSale" type="button">Add Sale</button>
-        <button id="menuDeleteSale" type="button">Delete Sales</button>
-        <button id="menuReturns" type="button">Returns</button>
-        <button id="menuSalesFilters" type="button">Sales Filters</button>
-        <button id="menuInventory" type="button">Inventory</button>
-        <button id="menuSecurity" type="button">Security</button>
+      <nav class="menu-links" aria-label="Main navigation">
+        <button id="menuDashboard" type="button">📊 Dashboard</button>
+        <button id="menuAddSale" type="button">✨ Add Sale</button>
+        <button id="menuDeleteSale" type="button">🗑️ Delete Sales</button>
+        <button id="menuReturns" type="button">↩️ Returns</button>
+        <button id="menuSalesFilters" type="button">🔍 Sales Filters</button>
+        <button id="menuInventory" type="button">👗 Inventory</button>
+        <button id="menuSecurity" type="button">🔒 Security</button>
       </nav>
 
       <section id="dashboardSection">
         <section class="stats-grid">
-          <article class="card">
+          <article class="card stat-card stat-card--orders">
+            <span class="stat-card__icon" aria-hidden="true">📦</span>
             <h2>Total Orders</h2>
             <p id="totalOrders" class="big-value">0</p>
           </article>
-          <article class="card">
+          <article class="card stat-card stat-card--revenue">
+            <span class="stat-card__icon" aria-hidden="true">💎</span>
             <h2>Revenue</h2>
             <p id="totalRevenue" class="big-value">₹0.00</p>
           </article>
-          <article class="card">
+          <article class="card stat-card stat-card--profit">
+            <span class="stat-card__icon" aria-hidden="true">📈</span>
             <h2>Profit</h2>
             <p id="totalProfit" class="big-value">₹0.00</p>
           </article>

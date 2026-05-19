@@ -333,11 +333,13 @@ function renderRemainingStock() {
     return;
   }
   state.inventory.forEach((item) => {
-    const low = item.stockQty <= item.reorderLevel;
-    const status = item.stockQty <= 0 ? "Out of Stock" : `${item.stockQty} left`;
-    const marker = low ? " (Low stock)" : "";
+    const low = item.stockQty <= item.reorderLevel && item.stockQty > 0;
+    const out = item.stockQty <= 0;
+    const status = out ? "Out of Stock" : `${item.stockQty} in stock`;
+    const badgeClass = out ? "stock-badge--out" : low ? "stock-badge--low" : "stock-badge--ok";
+    const badgeText = out ? "Out" : low ? "Low" : "OK";
     const li = document.createElement("li");
-    li.innerHTML = `<span class="record-label">${item.product} | ${status}${marker}</span>`;
+    li.innerHTML = `<span class="record-label">${item.product} · ${status}<span class="stock-badge ${badgeClass}">${badgeText}</span></span>`;
     list.appendChild(li);
   });
 }
@@ -360,7 +362,7 @@ function renderPurchaseMediumSummary() {
     .sort((a, b) => b[1] - a[1])
     .forEach(([medium, quantity]) => {
       const li = document.createElement("li");
-      li.innerHTML = `<span class="record-label">${medium} | ${quantity} items sold</span>`;
+      li.innerHTML = `<span class="record-label"><span class="medium-pill">${medium}</span>${quantity} items sold</span>`;
       list.appendChild(li);
     });
 }
@@ -749,9 +751,9 @@ async function renderAll() {
 
   const best = ids("bestSellersList");
   best.innerHTML = "";
-  getBestSellers(state.sales.filter((s) => s.status !== "returned")).forEach(([p, q]) => {
+  getBestSellers(state.sales.filter((s) => s.status !== "returned")).forEach(([p, q], i) => {
     const li = document.createElement("li");
-    li.textContent = `${p}: ${q} sold`;
+    li.innerHTML = `<span class="rank-badge">${i + 1}</span>${p} · <strong>${q}</strong> sold`;
     best.appendChild(li);
   });
 
@@ -769,7 +771,7 @@ async function renderAll() {
   ids("currentUserInfo").textContent = `User: ${state.userEmail}`;
   ids("currentRoleInfo").textContent = `Role: ${state.role}`;
   ids("roleBadge").textContent = `Role: ${state.role.toUpperCase()}`;
-  ids("statusMessage").textContent = "Connected to Supabase. Auto-refreshing every 5 seconds.";
+  ids("statusMessage").textContent = "✓ Live · Connected to Supabase · Refreshing every 5s";
   enforceRoleUI();
 }
 
